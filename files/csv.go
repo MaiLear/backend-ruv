@@ -22,7 +22,7 @@ func min(a, b int) int {
 
 // fillIncompleteArray llena un arreglo incompleto
 func fillIncompleteArray(rows []string, tabRow int) []string {
-	quantity := tabRow - len(incompleteArrays)
+	quantity := tabRow - len(incompleteArrays[0])
 
 	for i := 0; i < quantity; i++ {
 		incompleteArrays[0] = append(incompleteArrays[0], rows[i])
@@ -115,6 +115,7 @@ func filterFields(text []string, options []string, tabRow int) []string {
 func processTextToArray(text string, tabRow int, addColumn string) [][]string{
 	// Llama a convertTextToArray y maneja el error
 	rows := convertTextToArray(text, "»", "NULL")
+	incompleteArrays = [][]string{}
 
 	// Llama a filterFields y maneja el error
 	filterRows := filterFields(rows, []string{
@@ -140,7 +141,9 @@ func processTextToArray(text string, tabRow int, addColumn string) [][]string{
 
 		col := filterRows[i:min(i+tabRow, len(filterRows))] // Obtener un sub-slice
 
-		if len(col) == tabRow {
+		if len(col) > tabRow {
+			col = col[:tabRow] // Limita la fila a 53 elementos
+		}else if len(col) == tabRow {
 			doubleArray = append(doubleArray, col)
 		} else {
 			incompleteArrays = append(incompleteArrays, col)
