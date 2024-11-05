@@ -2,9 +2,11 @@ package routes
 
 import (
 	"file/files"
-	"fmt"
-	"io"
+	// "fmt"
+	// "io"
 	"net/http"
+	"path/filepath"
+	"strings"
 
 	// "fmt"
 
@@ -31,49 +33,36 @@ func Router() {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "file no found"})
 			return
 		}
-		//Abrir archivo
-		openedFile, err := file.Open()
 
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Unabled to open file"})
-			return
-		}
-		//Cerrar archivo para ahorrar recursos
-		defer openedFile.Close()
+		extension := strings.ToLower(filepath.Ext(file.Filename))
 
-		buffer := make([]byte, 512)
-
-		if _, err := openedFile.Read(buffer); err != nil && err != io.EOF {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to read file"})
-			return
-		}
-
-		//Obtener el tipo de archiovo
-		mimetype := http.DetectContentType(buffer)
-		fmt.Println("mimetype", mimetype)
-		//Almacenar en un map los tipo de archivos permitidos
-		allowedMimeTypes := map[string]bool{
-			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": true, // Excel .xlsx
-			"application/vnd.ms-excel": true, // Excel .xls
-			"text/plain; charset=utf-8":               true, //Txt
-		}
-
-		//Fallar si el tipo de archivo no esta permitido
-		if !allowedMimeTypes[mimetype] {
-			ctx.JSON(http.StatusUnsupportedMediaType, gin.H{"error": mimetype})
-			return
-		}
-
-		if err := ctx.SaveUploadedFile(file, "./uploads/"+file.Filename); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "file dont save"})
-			return
-		}
-
-		if mimetype == "text/plain; charset=utf-8" {
-			files.GetCsvData(file.Filename)
-		} else {
+		// Aquí puedes manejar los tipos de archivo según la extensión
+		switch extension {
+		case ".xls", ".xlsx":
+			if err := ctx.SaveUploadedFile(file, "./uploads/"+file.Filename); err != nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "file dont save"})
+				return
+			}
 			files.GetExcelData(file.Filename)
+			ctx.JSON(http.StatusOK, gin.H{"fileType": "Excel file"})
+		case ".txt":
+			if err := ctx.SaveUploadedFile(file, "./uploads/"+file.Filename); err != nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": "file dont save"})
+				return
+			}
+			files.GetCsvData(file.Filename)
+			ctx.JSON(http.StatusOK, gin.H{"fileType": "Text file"})
+		default:
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported file type"})
 		}
+
+		
+
+		// if mimetype == "text/plain; charset=utf-8" {
+		// 	files.GetCsvData(file.Filename)
+		// } else {
+		// 	files.GetExcelData(file.Filename)
+		// }
 
 		ctx.JSON(http.StatusOK, gin.H{"message": "file upload success!"})
 	})
